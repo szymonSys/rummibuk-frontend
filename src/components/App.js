@@ -1,6 +1,7 @@
 import React, { Component } from "react";
 import MainView from "./MainView";
 import NewGame from "./NewGame";
+import WaitingView from "./WaitingView";
 import {
   BrowserRouter as Router,
   Link,
@@ -22,10 +23,10 @@ class App extends Component {
       gameType: null,
       gameKey: null,
       gameName: "",
-      gamePassword: null,
+      gamePassword: "",
       isFounder: false,
       slots: null,
-      otherPlayers: []
+      gamePlayers: []
     };
     // this.addHello.bind(this);
   }
@@ -66,7 +67,6 @@ class App extends Component {
 
   resetGameType = () => {
     if (this.state.gameType) {
-      console.log("wtf");
       this.setState({ gameType: null });
     }
   };
@@ -78,6 +78,12 @@ class App extends Component {
     }));
   };
 
+  handleChange = event => {
+    const value = event.target.value;
+    const key = event.target.name;
+    this.setState({ [key]: value });
+  };
+
   btnClickHandle = type => {
     if (!this.state.playerName) return;
     if (this._validType(type)) {
@@ -85,6 +91,10 @@ class App extends Component {
         gameType: type
       }));
     }
+  };
+
+  setIsFounder = () => {
+    this.setState({ isFounder: true });
   };
 
   setPlayerKey = playerKey => {
@@ -125,8 +135,12 @@ class App extends Component {
     return false;
   };
 
+  setSlotsAndGameName = (gameName, slots) => {
+    if (!this.state.gameName) this.setState(() => ({ gameName }));
+    if (!this.state.slots) this.setState(() => ({ slots }));
+  };
+
   render() {
-    console.log("render");
     return (
       <Router>
         {this.redirect()}
@@ -150,11 +164,24 @@ class App extends Component {
               <GameManagement
                 playerName={this.state.playerName}
                 gameType={this.state.gameType}
+                gameName={this.state.gameName}
+                gamePassword={this.state.gamePassword}
+                slotsChoice={this.state.slots}
                 setKeys={this.setKeys}
+                handleChange={this.handleChange}
               />
             )}
           ></Route>
-          <Route path="/waiting-for-players" component={null}></Route>
+          <Route
+            path="/waiting-for-players"
+            render={() => (
+              <WaitingView
+                gameKey={this.state.gameKey}
+                playerKey={this.state.playerKey}
+                updateGameState={this.setSlotsAndGameName}
+              />
+            )}
+          ></Route>
           <Route
             path="/new-game"
             render={() => (
@@ -166,6 +193,7 @@ class App extends Component {
                 slots={this.state.slots}
                 password={this.state.gamePassword}
                 setKeys={this.setKeys}
+                setIsFounder={this.setIsFounder}
               />
             )}
           ></Route>

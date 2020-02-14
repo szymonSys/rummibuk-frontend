@@ -8,17 +8,16 @@ const NewGame = ({
   founderName,
   type,
   setKeys,
+  setIsFounder,
   slots,
   password
 }) => {
   const redirect = type => {
-    console.log("keys redirect: ", hasKeys);
-    if (!hasKeys) return null;
+    if (!(gameName || founderName || slots)) return <Redirect to="/" />;
     switch (type) {
       case "multiplayer":
         return <Redirect to="/waiting-for-players" />;
       case "singleplayer":
-        return <Redirect to="/game" />;
       case "localgame":
         return <Redirect to="/game" />;
       default:
@@ -29,14 +28,13 @@ const NewGame = ({
   const handleResponse = () => {
     GameAPI.create(gameName, founderName, slots, type, password)
       // .then(resp => resp.json())
-      .then(data => {
-        setKeys(data.founderKey, data.gameKey);
-      })
+      .then(data => setKeys(data.founderKey, data.gameKey))
+      .then(setIsFounder)
       .catch(err => console.log(err));
   };
 
   if (!hasKeys) handleResponse();
-  return redirect(type);
+  return hasKeys ? redirect(type) : null;
 };
 
 export default NewGame;

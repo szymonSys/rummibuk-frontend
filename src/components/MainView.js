@@ -11,7 +11,7 @@ const MainView = ({ checkKeys, btnClickHandle, resetGameType, ...rest }) => {
   });
   return (
     <>
-      <h1>Welcome in The Rummikub Online game.</h1>
+      <h1>Welcome to The Rummikub Online game.</h1>
       <p>Please enter your name and choose game mode below to start playing.</p>
       <PlayerForm {...rest} />
       <div>

@@ -4,7 +4,7 @@ import GameForm from "./GameForm";
 import GamesList from "./GamesList";
 import GameChoice from "./GameChoice";
 
-const GameManagement = ({ playerName, gameType, ...rest }) => {
+const GameManagement = ({ playerName, gameType, setKeys, ...rest }) => {
   const [wayOfPlaying, setWayOfPlaying] = useState(null);
 
   useEffect(() => {
@@ -20,7 +20,6 @@ const GameManagement = ({ playerName, gameType, ...rest }) => {
   };
 
   const redirect = () => {
-    console.log(playerName, gameType);
     if (!playerName || !gameType) return <Redirect push to={"/"} />;
     if (wayOfPlaying === "join") {
       return <Redirect push to={"/game-management/games-list"} />;
@@ -50,14 +49,12 @@ const GameManagement = ({ playerName, gameType, ...rest }) => {
         <Route
           exact
           path={"/game-management/games-list"}
-          render={() => (
-            <GamesList setKeys={rest.setKeys} playerName={playerName} />
-          )}
+          render={() => <GamesList setKeys={setKeys} playerName={playerName} />}
         />
         <Route
           exact
           path={"/game-management/game-creator"}
-          render={() => <GameForm />}
+          render={() => <GameForm {...rest} />}
         />
       </Switch>
     </>

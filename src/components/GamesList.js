@@ -13,13 +13,6 @@ const GamesList = ({ setKeys, playerName }) => {
       .catch(err => console.log(err));
   };
 
-  const handleJoin = (playerName, gameKey, gamePassword) => {
-    GameAPI.join(playerName, "net", gameKey, gamePassword)
-      .then(data => setKeys(data.founderKey, data.gameKey))
-      .then(() => setHasKeys(true))
-      .catch(err => console.log(err));
-  };
-
   const redirect = () =>
     hasKeys ? <Redirect to={"/waiting-for-players"} /> : null;
 
@@ -28,7 +21,9 @@ const GamesList = ({ setKeys, playerName }) => {
       <Game
         key={index}
         game={game}
-        handleJoin={handleJoin}
+        setKeys={setKeys}
+        setHasKeys={setHasKeys}
+        // handleJoin={handleJoin}
         playerName={playerName}
       />
     ));

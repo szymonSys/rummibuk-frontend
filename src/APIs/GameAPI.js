@@ -1,5 +1,14 @@
 const keys = { founderKey: "ovhrvhr0vh", gameKey: "wpcvhgwpv98hv9" };
 
+const gamePlayers = {
+  playersData: [
+    { name: "szymon", id: 1 },
+    { name: "kryspin", id: 2 }
+  ],
+  slots: 4,
+  gameName: "Gierełka"
+};
+
 const gamesData = {
   games: [
     {
@@ -64,6 +73,12 @@ export default class GameAPI {
   static getAvailable() {
     return new Promise((resolve, reject) => {
       resolve(gamesData);
+    });
+  }
+
+  static getPlayers(gameKey, playerKey) {
+    return new Promise((resolve, reject) => {
+      resolve(gamePlayers);
     });
   }
 
