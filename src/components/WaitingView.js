@@ -2,7 +2,13 @@ import React, { useEffect, useState } from "react";
 import { Redirect } from "react-router-dom";
 import GameAPI from "../APIs/GameAPI";
 
-const WaitingView = ({ gameKey, playerKey, updateGameState }) => {
+const WaitingView = ({
+  setInGame,
+  gameKey,
+  playerKey,
+  updateGameState,
+  inLobby
+}) => {
   const [playersData, setPlayersData] = useState({});
   useEffect(() => {
     sendRequest();
@@ -16,12 +22,19 @@ const WaitingView = ({ gameKey, playerKey, updateGameState }) => {
   useEffect(() => {
     if (playersData) {
       updateGameState(playersData.gameName, playersData.slots);
+      if (
+        playersData.playersData &&
+        playersData.slots &&
+        playersData.playersData.length === playersData.slots
+      ) {
+        setInGame();
+      }
     }
   }, [playersData]);
 
   const handleResponse = () => {
     GameAPI.getPlayers(gameKey, playerKey)
-      // .then(resp => resp.json())
+      .then(resp => resp.json())
       .then(data => setPlayersData(data))
       .catch(err => console.log(err));
   };
@@ -32,8 +45,8 @@ const WaitingView = ({ gameKey, playerKey, updateGameState }) => {
   };
 
   const redirect = () => {
-    if (!(gameKey || playerKey)) {
-      console.log("waitinh view: ", gameKey, playerKey);
+    const sessionInLobby = window.sessionStorage.getItem("inLobby");
+    if (inLobby && (!sessionInLobby || sessionInLobby === "false")) {
       return <Redirect to={"/"} />;
     }
     if (playersData && playersData.slots && playersData.playersData.length)
@@ -65,9 +78,7 @@ const WaitingView = ({ gameKey, playerKey, updateGameState }) => {
       <div>{"<<waiting-icon>>"}</div>
       <div>
         <h2>
-          {playersData && playersData.gameName
-            ? playersData.gameName
-            : "Game not found"}
+          {playersData.gameName ? playersData.gameName : "Game not found"}
         </h2>
         {playersData && playersData.playersData ? (
           <ol>{createPlayersList(...playersData.playersData)}</ol>

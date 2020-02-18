@@ -5,7 +5,8 @@ import GameAPI from "../APIs/GameAPI";
 const Game = ({ game, setHasKeys, setKeys, playerName }) => {
   const handleJoin = (playerName, gameKey, gamePassword) => {
     GameAPI.join(playerName, "net", gameKey, gamePassword)
-      .then(data => setKeys(data.founderKey, data.gameKey))
+      .then(resp => resp.json())
+      .then(data => setKeys(data.playerData.playerKey, data.gameData.key))
       .then(() => setHasKeys(true))
       .catch(err => console.log(err));
   };

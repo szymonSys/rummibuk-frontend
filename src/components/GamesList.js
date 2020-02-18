@@ -3,13 +3,13 @@ import Game from "./Game";
 import GameAPI from "../APIs/GameAPI";
 import { Redirect } from "react-router-dom";
 
-const GamesList = ({ setKeys, playerName }) => {
+const GamesList = ({ inGame, setInLobby, setKeys, playerName, gameKey }) => {
   const [gamesList, setGamesList] = useState([]);
   const [hasKeys, setHasKeys] = useState(false);
   const handleResponse = () => {
     GameAPI.getAvailable()
-      // .then(resp => resp.json())
-      .then(data => setGamesList(data.games))
+      .then(resp => resp.json())
+      .then(data => setGamesList(data.gamesData))
       .catch(err => console.log(err));
   };
 
@@ -23,18 +23,27 @@ const GamesList = ({ setKeys, playerName }) => {
         game={game}
         setKeys={setKeys}
         setHasKeys={setHasKeys}
-        // handleJoin={handleJoin}
         playerName={playerName}
       />
     ));
   };
 
-  if (!gamesList.length) handleResponse();
+  useEffect(() => {
+    if (gamesList && !gamesList.length) handleResponse();
+  }, []);
+
+  useEffect(() => {
+    const sessionInGame = window.sessionStorage.getItem("inGame");
+    // if (!(sessionInGame || sessionInGame === "true")) setInLobby();
+    console.log(sessionInGame, hasKeys);
+    if (!(sessionInGame || sessionInGame === "true") && hasKeys) setInLobby();
+  });
 
   return (
     <div>
-      {redirect()}
+      {window.sessionStorage.getItem("inLobby") && redirect()}
       <h2>Games List</h2>
+
       <div style={{ display: "flex", justifyContent: "space-around" }}>
         <div>name</div>
         <div>founder</div>

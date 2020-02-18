@@ -28,8 +28,14 @@ const GameForm = ({ gameName, gamePassword, slotsChoice, handleChange }) => {
     }
     return inputs;
   };
-  const redirect = () =>
-    isCreated ? <Redirect push to={"/new-game"} /> : null;
+  const redirect = () => {
+    if (window.sessionStorage.getItem("inGame") === "true")
+      return <Redirect to={"/game"} />;
+    if (window.sessionStorage.getItem("inLobby") === "true")
+      return <Redirect to={"/waiting-for-players"} />;
+    if (isCreated) return <Redirect to={"/new-game"} />;
+    return null;
+  };
   const confirmCreation = () => {
     if (
       slotsChoice > 1 &&

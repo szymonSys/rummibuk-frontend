@@ -2,6 +2,8 @@ import React, { Component } from "react";
 import MainView from "./MainView";
 import NewGame from "./NewGame";
 import WaitingView from "./WaitingView";
+import AddPlayers from "./AddPlayers";
+import GameView from "./GameView";
 import {
   BrowserRouter as Router,
   Link,
@@ -17,7 +19,6 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      // helloes: [],
       playerName: "",
       playerKey: null,
       gameType: null,
@@ -26,44 +27,24 @@ class App extends Component {
       gamePassword: "",
       isFounder: false,
       slots: null,
-      gamePlayers: []
+      gamePlayers: [],
+      inLobby: false,
+      inGame: false
     };
-    // this.addHello.bind(this);
   }
 
-  componentDidUpdate(prevProps, prevState) {}
+  componentDidMount() {
+    window.onbeforeunload = this.logit;
+  }
 
-  // makeHello = () => {
-  //   return this.state.helloes.map((hello, index) => <p key={index}>{hello}</p>);
-  // };
-
-  // getHelloes = () => {
-  //   fetch("/hello")
-  //     .then(resp => resp.json())
-  //     .then(resp => {
-  //       console.log(resp);
-  //       const helloes = resp.msg;
-  //       this.setState({ helloes: helloes });
-  //     });
-  // };
-
-  // addHello = data => {
-  //   fetch("/hello", {
-  //     method: "post",
-  //     body: JSON.stringify(JSON.stringify(data)),
-  //     headers: {
-  //       "Content-Type": "application/json"
-  //     }
-  //   })
-  //     .then(resp => resp.json())
-  //     .then(resp => {
-  //       const helloes = resp.msg;
-  //       this.setState({ helloes: helloes });
-  //     })
-  //     .catch(err => {
-  //       console.log(err);
-  //     });
-  // };
+  componentDidUpdate(prevProps, prevState) {
+    if (prevState.inGame !== this.state.inGame) {
+      window.sessionStorage.setItem("inGame", this.state.inGame);
+    }
+    if (prevState.inLobby !== this.state.inLobby) {
+      window.sessionStorage.setItem("inLobby", this.state.inLobby);
+    }
+  }
 
   resetGameType = () => {
     if (this.state.gameType) {
@@ -101,10 +82,14 @@ class App extends Component {
     this.setState({ playerKey });
   };
 
+  setGamePlayers = (...gamePlayers) => {
+    this.setState({
+      gamePlayers,
+      slots: gamePlayers.length
+    });
+  };
+
   redirect = () => {
-    // return this._validType(this.state.gameType) ? (
-    //   <Redirect push to="/new-game" />
-    // ) : null;
     switch (this.state.gameType) {
       case "multiplayer":
         return <Redirect push to="/game-management" />;
@@ -137,82 +122,123 @@ class App extends Component {
 
   setSlotsAndGameName = (gameName, slots) => {
     if (!this.state.gameName) this.setState(() => ({ gameName }));
-    if (!this.state.slots) this.setState(() => ({ slots }));
+    if (!this.state.slots) this.setState(() => ({ slots: parseInt(slots) }));
+  };
+
+  updatePlayersData = (...gamePlayers) => {
+    this.setState({ gamePlayers });
+  };
+
+  setInLobby = () => this.setState({ inLobby: true });
+  setInGame = () => {
+    const newState = { inGame: true };
+    if (this.state.inLobby) newState.inLobby = false;
+    this.setState(newState);
+  };
+
+  logit = event => {
+    event.preventDefault();
+    console.log("bambam");
   };
 
   render() {
     return (
-      <Router>
-        {this.redirect()}
-        <Switch>
-          <Route
-            exact
-            path="/"
-            render={() => (
-              <MainView
-                checkKeys={this.checkKeys}
-                resetGameType={this.resetGameType}
-                inputChangeHandle={this.inputChangeHandle}
-                btnClickHandle={this.btnClickHandle}
-                playerName={this.state.playerName}
-              />
-            )}
-          ></Route>
-          <Route
-            path="/game-management"
-            render={() => (
-              <GameManagement
-                playerName={this.state.playerName}
-                gameType={this.state.gameType}
-                gameName={this.state.gameName}
-                gamePassword={this.state.gamePassword}
-                slotsChoice={this.state.slots}
-                setKeys={this.setKeys}
-                handleChange={this.handleChange}
-              />
-            )}
-          ></Route>
-          <Route
-            path="/waiting-for-players"
-            render={() => (
-              <WaitingView
-                gameKey={this.state.gameKey}
-                playerKey={this.state.playerKey}
-                updateGameState={this.setSlotsAndGameName}
-              />
-            )}
-          ></Route>
-          <Route
-            path="/new-game"
-            render={() => (
-              <NewGame
-                hasKeys={this.checkKeys()}
-                gameName={this.state.gameName}
-                founderName={this.state.playerName}
-                type={this.state.gameType}
-                slots={this.state.slots}
-                password={this.state.gamePassword}
-                setKeys={this.setKeys}
-                setIsFounder={this.setIsFounder}
-              />
-            )}
-          ></Route>
-          <Route path="/add-players" component={null}></Route>
-          <Route path="/game" component={null}></Route>
-        </Switch>
-        {/* <div>
-          <button
-            onClick={this.addHello.bind(this, {
-              hello: `Hello-${this.state.helloes.length}`
-            })}
-          >
-            Add hello!
-          </button>
-          <div className="App">
-            {this.state.helloes.length && this.makeHello()}
-          </div>
-        </div> */}
-      </Router>
+      <div>
+        <Router>
+          {this.redirect()}
+          <Switch>
+            <Route
+              exact
+              path="/"
+              render={() => (
+                <MainView
+                  checkKeys={this.checkKeys}
+                  resetGameType={this.resetGameType}
+                  inputChangeHandle={this.inputChangeHandle}
+                  btnClickHandle={this.btnClickHandle}
+                  playerName={this.state.playerName}
+                  gameKey={this.state.gameKey}
+                />
+              )}
+            ></Route>
+            <Route
+              path="/game-management"
+              render={() => (
+                <GameManagement
+                  inGame={this.state.inGame}
+                  setInLobby={this.setInLobby}
+                  playerName={this.state.playerName}
+                  gameType={this.state.gameType}
+                  gameName={this.state.gameName}
+                  gamePassword={this.state.gamePassword}
+                  gameKey={this.state.gameKey}
+                  slotsChoice={this.state.slots}
+                  setKeys={this.setKeys}
+                  handleChange={this.handleChange}
+                />
+              )}
+            ></Route>
+            <Route
+              path="/waiting-for-players"
+              render={() => (
+                <WaitingView
+                  setInGame={this.setInGame}
+                  gameKey={this.state.gameKey}
+                  playerKey={this.state.playerKey}
+                  updateGameState={this.setSlotsAndGameName}
+                  inLobby={this.state.inLobby}
+                  inGame={this.state.inGame}
+                />
+              )}
+            ></Route>
+            <Route
+              path="/new-game"
+              render={() => (
+                <NewGame
+                  gameName={this.state.gameName}
+                  founderName={this.state.playerName}
+                  type={this.state.gameType}
+                  slots={this.state.slots}
+                  password={this.state.gamePassword}
+                  founderKey={this.state.playerKey}
+                  gameKey={this.state.gameKey}
+                  players={[...this.state.gamePlayers]}
+                  inLobby={this.state.inLobby}
+                  inGame={this.state.inGame}
+                  hasKeys={this.checkKeys()}
+                  setInLobby={this.setInLobby}
+                  setInGame={this.setInGame}
+                  updatePlayersData={this.updatePlayersData}
+                  setKeys={this.setKeys}
+                  setIsFounder={this.setIsFounder}
+                />
+              )}
+            ></Route>
+            <Route
+              path="/add-players"
+              render={() => (
+                <AddPlayers
+                  gameType={this.state.gameType}
+                  founderName={this.state.playerName}
+                  setGamePlayers={this.setGamePlayers}
+                  gameKey={this.state.gameKey}
+                />
+              )}
+            ></Route>
+            <Route
+              path="/game"
+              render={() => (
+                <GameView
+                  gameKey={this.state.gameKey}
+                  playerKey={this.state.playerKey}
+                  inGame={this.state.inGame}
+                />
+              )}
+            ></Route>
+            )
+          </Switch>
+        </Router>
+      </div>
     );
   }
 }

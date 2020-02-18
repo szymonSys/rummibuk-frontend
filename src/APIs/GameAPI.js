@@ -1,90 +1,94 @@
-const keys = { founderKey: "ovhrvhr0vh", gameKey: "wpcvhgwpv98hv9" };
-
-const gamePlayers = {
-  playersData: [
-    { name: "szymon", id: 1 },
-    { name: "kryspin", id: 2 }
-  ],
-  slots: 4,
-  gameName: "Gierełka"
-};
-
-const gamesData = {
-  games: [
-    {
-      name: "Moja Gra",
-      founderName: "szymon",
-      slots: 4,
-      hasPassword: false,
-      type: "multiplayer",
-      state: "init",
-      key: "Ou87fO&8h78hpUHi7scnoG",
-      playersData: [
-        {
-          name: "szymon",
-          id: 1,
-          blocksQuantity: 0
-        },
-        {
-          name: "karol",
-          id: 2,
-          blocksQuantity: 0
-        }
-      ]
-    },
-    {
-      name: "Giereczka",
-      founderName: "magda",
-      slots: 3,
-      hasPassword: true,
-      type: "multiplayer",
-      state: "init",
-      key: "OhiuhUJOIJuhnoG",
-      playersData: [
-        {
-          name: "magda",
-          id: 1,
-          blocksQuantity: 0
-        },
-        {
-          name: "darek",
-          id: 2,
-          blocksQuantity: 0
-        }
-      ]
+function handleFetch(url, method, requestData = null) {
+  const options = {
+    method,
+    hearers: {
+      "Content-Type": "application/json"
     }
-  ]
-};
+  };
+  if (method === "post") options.body = JSON.stringify(requestData);
+  return fetch(url, options);
+}
 
 export default class GameAPI {
-  static create(
-    gameName,
-    founderName,
-    type,
-    callback,
-    slots = 4,
-    password = null
-  ) {
-    return new Promise((resolve, reject) => {
-      resolve(keys);
+  static create(gameName, founderName, type, slots, password) {
+    return handleFetch("/create-game", "post", {
+      gameName,
+      founderName,
+      type,
+      slots,
+      password
     });
   }
 
   static getAvailable() {
-    return new Promise((resolve, reject) => {
-      resolve(gamesData);
-    });
+    return handleFetch("/get-games", "get");
+  }
+
+  static getRoundData(gameKey, playerKey) {
+    return handleFetch("/get-round-data", "post", { gameKey, playerKey });
+  }
+
+  static getBoardData(gameKey, playerKey) {
+    return handleFetch("/get-board-data", "post", { gameKey, playerKey });
   }
 
   static getPlayers(gameKey, playerKey) {
-    return new Promise((resolve, reject) => {
-      resolve(gamePlayers);
-    });
+    return handleFetch("/get-game-players", "post", { gameKey, playerKey });
   }
 
   static join(playerName, playerType, gameKey, gamePassword) {
-    return new Promise((resolve, reject) => {
-      resolve(keys);
+    return handleFetch("/join", "post", {
+      playerName,
+      playerType,
+      gameKey,
+      gamePassword
     });
+  }
+
+  static checkState(gameKey, playerKey, gameState, boardId) {
+    return handleFetch("/check-updates", "post", {
+      gameKey,
+      playerKey,
+      gameState,
+      boardId
+    });
+  }
+
+  static joinAllPlayers(gameKey, founderKey, ...players) {
+    return handleFetch("/join-everyone", "post", {
+      gameKey,
+      founderKey,
+      players
+    });
+  }
+
+  static getRandomBlock(playerKey, gameKey) {
+    return handleFetch("/get-block", "post", { gameKey, playerKey });
+  }
+
+  static startRound(playerKey, gameKey) {
+    return handleFetch("/start-round", "post", { gameKey, playerKey });
+  }
+
+  static finishRound(playerKey, gameKey) {
+    return handleFetch("/finish-round", "post", { gameKey, playerKey });
+  }
+
+  static getPlayerData(gameKey, playerKey) {
+    return handleFetch("/get-player-data", "post", { gameKey, playerKey });
+  }
+
+  static updateBoard(playerKey, gameKey, setId, replace, blocksIds) {
+    return handleFetch("/update-board", "post", {
+      gameKey,
+      playerKey,
+      blocksIds,
+      setId,
+      replace
+    });
+  }
+
+  static getData(gameKey, playerKey) {
+    return handleFetch("/get-game-data", "post", { gameKey, playerKey });
   }
 }
