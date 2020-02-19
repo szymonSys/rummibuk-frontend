@@ -14,7 +14,8 @@ const PlayerPanel = ({
   addToTemp,
   removeFromTemp,
   addToDraggingHandle,
-  gotBlock
+  drewBlock,
+  isDraggingTemp
 }) => {
   const blocksIds = [];
   const createBlocksCollection = (
@@ -24,14 +25,16 @@ const PlayerPanel = ({
     isTempComplet = false
   ) => {
     if (Array.isArray(blocks) && blocks.length) {
+      const sortingCallback = (a, b) => a.value - b.value;
+      if (isTempComplet) blocks.sort(sortingCallback);
       return blocks.map((block, index) => {
         const {
           id,
           color,
           value,
           membership,
-          playerId,
-          setId,
+          player_id: playerId,
+          set_id: setId,
           isTemp,
           isDragging
         } = block;
@@ -55,10 +58,41 @@ const PlayerPanel = ({
     }
   };
   return (
-    <div>
-      <div>
-        {inRound && !gotBlock && (
+    <div
+      style={{
+        backgroundColor: "#222",
+        padding: "5px 30px",
+        borderRadius: "3%"
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          margin: "20px 0"
+        }}
+      >
+        {inRound && !drewBlock ? (
           <Button text="Get block" click={getRandomBlockHandle} />
+        ) : (
+          <button
+            style={{
+              userSelect: "none",
+              border: "none",
+              margin: 0,
+              padding: 0,
+              width: "120px",
+              height: "60px",
+              overflow: "visible",
+              borderRadius: "10%",
+              opacity: 0.5,
+              fontSize: "16px",
+              cursor: "not-allowed"
+            }}
+          >
+            Get block
+          </button>
         )}
         <TempComplet
           blocks={createBlocksCollection(
@@ -69,13 +103,48 @@ const PlayerPanel = ({
           )}
           blocksIds={blocksIds}
           addToDraggingHandle={addToDraggingHandle}
-        />
-        <div
-          onMouseDown={() => addToDraggingHandle(true, ...blocksIds)}
-          onDrag={event => event.preventDefault()}
-          style={{ backgroundColor: "black", width: "50px", height: "50px" }}
-        ></div>
-        {inRound && <Button text="Finish round" click={finishRoundHandle} />}
+        >
+          {" "}
+          <div
+            onMouseDown={() => addToDraggingHandle(true, ...blocksIds)}
+            onDrag={event => event.preventDefault()}
+            style={{
+              backgroundColor: "#fff",
+              width: "60px",
+              height: "60px",
+              borderRadius: "100%",
+              margin: "0 0 0 5px",
+              cursor: "grab",
+              color: "green",
+              border: "1px solid green",
+              textAlign: "center",
+              lineHeight: "60px"
+            }}
+          >
+            grab
+          </div>
+        </TempComplet>
+        {inRound ? (
+          <Button text="Finish round" click={finishRoundHandle} />
+        ) : (
+          <button
+            style={{
+              userSelect: "none",
+              border: "none",
+              margin: 0,
+              padding: 0,
+              width: "120px",
+              height: "60px",
+              overflow: "visible",
+              borderRadius: "10%",
+              opacity: 0.5,
+              fontSize: "16px",
+              cursor: "not-allowed"
+            }}
+          >
+            Finish round
+          </button>
+        )}
       </div>
       <div>
         <TimeBar />

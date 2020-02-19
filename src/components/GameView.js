@@ -28,6 +28,7 @@ class GameView extends Component {
       isDraggingBlock: false,
       inRound: false,
       isLoaded: false,
+      roundBlocksQuantity: null,
       blocksCollection: [],
       draggingBlocks: []
     };
@@ -147,9 +148,11 @@ class GameView extends Component {
     this.checkingDataTimeoutId = setTimeout(this.check, 2000);
   };
 
-  updateBoard = (setId = null, replace = false, event) => {
+  updateBoard = (setId = null, a = false, event) => {
     event.stopPropagation();
+    let replace = false;
     let permision = true;
+    if (!this.state.inRound) permision = false;
     const { playerData, draggingBlocks } = this.state;
     if (!this.state.draggingBlocks.length) permision = false;
     if (
@@ -161,6 +164,32 @@ class GameView extends Component {
       permision = false;
     if (replace && draggingBlocks.length !== 1 && permision) permision = false;
     const blocksIds = permision ? draggingBlocks.map(block => block.id) : null;
+
+    if (setId !== null && draggingBlocks.length === 1 && permision) {
+      const set = this.state.boardData.sets.find(set => setId === set.id);
+      if (set) {
+        const jokerIndex = set.blocks.findIndex(block => block.value === 0);
+        if (jokerIndex !== -1) {
+          const [updater] = draggingBlocks;
+          if (
+            set.type === "collection" &&
+            set.blocks.some(block => block.value === updater.value)
+          )
+            replace = true;
+          const compareJoker = (val = 1) =>
+            set.blocks[jokerIndex + 1 * val].value ===
+              updater.value + 1 * val && true;
+          if (jokerIndex == 0) {
+            replace = compareJoker();
+          } else if (jokerIndex == draggingBlocks.length - 1) {
+            replace = compareJoker(-1);
+          } else {
+            replace = compareJoker() && compareJoker(-1);
+          }
+        }
+      }
+    }
+
     console.log(setId);
     console.log(replace);
     console.log(blocksIds);
@@ -174,7 +203,6 @@ class GameView extends Component {
       )
         .then(resp => resp.json())
         .then(data => {
-          console.log(data);
           data.isUpdated && this.setState({ boardData: data.boardData });
           return data.isUpdated;
         })
@@ -183,31 +211,67 @@ class GameView extends Component {
             GameAPI.getPlayerData(playerData.gameKey, playerData.playerKey)
               .then(resp => resp.json())
               .then(data =>
-                this.setState({ playerData: data.playerData, tempComplet: [] })
+                this.setState({
+                  playerData: data.playerData,
+                  tempComplet: [],
+                  updateInRound: true
+                })
               );
         });
     console.log(permision);
     this.removeFromDragging();
   };
 
-  addToTemp = blockId => {
-    let index;
-    const tempBlock = this.state.blocksCollection.find((block, i) => {
-      index = i;
-      return block.id === blockId;
-    });
+  addToTemp = (blockId, fromBoard = false) => {
+    let isBlocksSet = false;
+    let isBlocksCollection = false;
+    let blockIndex = null;
+    let setIndex = null;
+    let target = null;
+    let tempBlock = null;
+
+    if (!fromBoard) {
+      target = [...this.state.blocksCollection];
+      isBlocksCollection = true;
+      tempBlock = target.find((block, i) => {
+        blockIndex = i;
+        return block.id === blockId;
+      });
+    } else {
+      const sets = this.state.boardData.sets;
+      for (let sIndex in sets) {
+        for (let bIndex in sets[sIndex].blocks) {
+          if (sets[sIndex].blocks[bIndex].id === blockId) {
+            tempBlock = sets[sIndex].blocks[bIndex];
+            isBlocksSet = true;
+            target = [...sets[sIndex].blocks];
+            blockIndex = bIndex;
+            setIndex = sIndex;
+          }
+        }
+      }
+    }
+
     if (tempBlock) {
       const tempIndex = this.state.tempComplet.findIndex(
         block => block.id === tempBlock.id
       );
       if (tempIndex === -1) {
-        if (index == 0 || index) {
-          const modyfiedBlock = { ...this.state.blocksCollection[index] };
+        if (blockIndex == 0 || blockIndex) {
+          const modyfiedBlock = { ...target[blockIndex] };
           const tempComplet = [...this.state.tempComplet, tempBlock];
-          const blocksCollection = [...this.state.blocksCollection];
           modyfiedBlock.isTemp = true;
-          blocksCollection[index] = modyfiedBlock;
-          this.setState({ tempComplet, blocksCollection });
+          target[blockIndex] = modyfiedBlock;
+
+          const newState = { tempComplet };
+          if (isBlocksSet && setIndex !== null) {
+            const boardData = { ...this.state.boardData };
+            boardData.sets[setIndex].blocks = target;
+            newState.boardData = boardData;
+          } else if (isBlocksCollection) {
+            newState.blocksCollection = target;
+          }
+          this.setState(newState);
         }
       }
     }
@@ -219,21 +283,63 @@ class GameView extends Component {
     );
     if (removedBlock) {
       const tempComplet = [...this.state.tempComplet];
-      const blockIndex = this.state.blocksCollection.findIndex(
+      let isBlocksSet = null;
+      let isBlocksCollection = null;
+      let setIndex = null;
+      const chooseBlocksCollection = () => {
+        isBlocksCollection = true;
+        return [...this.state.blocksCollection];
+      };
+      const chooseBoardSet = () => {
+        setIndex = this.state.boardData.sets.findIndex(
+          set => set.id === removedBlock.set_id
+        );
+        isBlocksSet = true;
+
+        return [...this.state.boardData.sets[setIndex].blocks];
+      };
+      const target =
+        removedBlock.membership === "player"
+          ? chooseBlocksCollection()
+          : chooseBoardSet();
+      const blockIndex = target.findIndex(
         block => removedBlock.id === block.id
       );
-      const blocksCollection = [...this.state.blocksCollection];
-      blocksCollection[blockIndex].isTemp = false;
+      if (!target) return;
+      target[blockIndex].isTemp = false;
       tempComplet.splice(tempComplet.indexOf(removedBlock), 1);
-      this.setState({ tempComplet, blocksCollection });
+      const newState = { tempComplet };
+      if (isBlocksSet && setIndex !== null) {
+        const boardData = { ...this.state.boardData };
+        boardData.sets[setIndex].blocks = target;
+        newState.boardData = boardData;
+      } else if (isBlocksCollection) {
+        newState.blocksCollection = target;
+      }
+      this.setState(newState);
     }
+  };
+
+  removeBoardBlocksFromTemp = () => {
+    const tempComplet = this.state.tempComplet.filter(
+      block => block.membership !== "set"
+    );
+    this.setState({ tempComplet });
   };
 
   startRound = () => {
     const { playerKey, gameKey } = this.state.playerData;
     GameAPI.startRound(playerKey, gameKey)
       .then(resp => resp.json())
-      .then(roundData => this.setState({ roundData, gotBlock: false }))
+      .then(data => {
+        const playerData = deepCopy(this.state.playerData);
+        playerData.drewBlock = data.drewBlock;
+        this.setState({
+          roundData: data.roundData,
+          playerData,
+          roundBlocksQuantity: this.state.playerData.blocks.length
+        });
+      })
       .catch(err => console.log(err));
   };
 
@@ -245,13 +351,22 @@ class GameView extends Component {
 
   finishRound = () => {
     const { playerKey, gameKey } = this.state.playerData;
+    this.removeBoardBlocksFromTemp();
+    console.log(
+      this.state.roundBlocksQuantity,
+      this.state.playerData.blocks.length
+    );
+    if (
+      !this.state.drewBlock &&
+      this.state.roundBlocksQuantity === this.state.playerData.blocks.length
+    ) {
+      this.getRandomBlock();
+    }
     GameAPI.finishRound(playerKey, gameKey)
       .then(resp => resp.json())
       .then(roundData => this.setState({ roundData }))
       .catch(err => console.log(err));
   };
-
-  getFromSet = () => {};
 
   getRandomBlock = () => {
     const { playerKey, gameKey } = this.state.playerData;
@@ -260,26 +375,49 @@ class GameView extends Component {
       .then(resp => resp.json())
       .then(data => {
         playerData.blocks = data.blocks;
-        this.setState({ playerData, gotBlock: true });
+        playerData.drewBlock = data.drewBlock;
+        this.setState({ playerData });
       })
       .catch(err => console.log(err));
   };
 
-  moveDraggingElem = () => {};
   addToDragging = (isTemp, ...ids) => {
     if (!ids.length) return;
-    const draggingBlocks = ids
-      .map(id => this.state.blocksCollection.filter(block => id === block.id))
+    const blocksCollection = [...this.state.blocksCollection];
+    const idsCopy = [...ids];
+    let draggingBlocks = ids
+      .map((id, index) =>
+        blocksCollection.filter(block => {
+          if (id === block.id) {
+            idsCopy.splice(idsCopy.indexOf(id), 1);
+            block.isDragging = true;
+          }
+          return id === block.id;
+        })
+      )
       .flat();
 
-    const blocksCollection = [...this.state.blocksCollection];
-    draggingBlocks.forEach(draggingBlock => {
-      blocksCollection.forEach(block => {
-        if (block.id === draggingBlock.id) block.isDragging = true;
-      });
-    });
+    let sets = null;
+    if (isTemp) {
+      sets = [...this.state.boardData.sets];
+      for (let idIndex in idsCopy) {
+        sets.forEach(set => {
+          draggingBlocks = draggingBlocks.concat(
+            set.blocks.filter(block => {
+              if (idsCopy[idIndex] === block.id) block.isDragging = true;
+              return idsCopy[idIndex] === block.id;
+            })
+          );
+        });
+      }
+    }
 
     const newState = { draggingBlocks, blocksCollection };
+    if (isTemp && sets) {
+      const boardData = { ...this.boardData };
+      boardData.sets = sets;
+      newState.boardData = boardData;
+    }
     if (isTemp) {
       newState.isDraggingTemp = true;
     } else {
@@ -307,10 +445,57 @@ class GameView extends Component {
     this.setState({ cursorX: event.clientX, cursorY: event.clientY });
   };
 
+  createDraggingBlocks = () => {
+    const colors = {
+      red: "#ff6060",
+      green: "#60ff70",
+      blue: "#60b7ff",
+      yellow: "#ffcc60",
+      purple: "#bd60ff"
+    };
+    return (
+      <div
+        style={{
+          position: "absolute",
+          top: `${this.state.cursorY + 1}px`,
+          left: `${this.state.cursorX + 1}px`
+        }}
+      >
+        {this.state.draggingBlocks.map((block, index) => {
+          const { id, color, value } = block;
+          return (
+            <div
+              id={`dragging-block${id}`}
+              key={index}
+              style={{
+                display: "inline-block",
+                backgroundColor: `${colors[color]}`,
+                position: "relative",
+                width: "40px",
+                height: "60px",
+                margin: "10px",
+                textAlign: "center",
+                margin: "5px",
+                opacity: 0.1,
+                transition: ".1s",
+                borderRadius: "20%",
+                color: "#333",
+                fontSize: "20px",
+                fontWeight: "bold",
+                boxShadow: "0px 4px 7px 1px rgba(0,0,0,0.75)",
+                cursor: "grabbing"
+              }}
+            >
+              {value}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   createView = () => {
     const {
-      cursorY,
-      cursorX,
       isDraggingTemp,
       isDraggingBlock,
       boardData,
@@ -325,80 +510,34 @@ class GameView extends Component {
     } = this.state;
     return (
       <div
-        style={{ position: "relative" }}
+        style={{
+          position: "relative",
+          userSelect: "none",
+          backgroundColor: "#444",
+          overflow: "hidden",
+          minHeight: "100vh",
+          color: "#eee",
+          padding: "10px 8%",
+          boxSizing: "border-box",
+          cursor: `${
+            isDraggingBlock || isDraggingTemp ? "grabbing" : "default"
+          }`
+        }}
         onMouseMove={this.setCursorPosition}
         onMouseUp={this.removeFromDragging}
       >
-        <InfoBar />
-        {isDraggingTemp && (
-          <div
-            onMouseUp={event => console.log(event.target)}
-            style={{
-              position: "absolute",
-              // transform: "translate(-50%, -50%)",
-              top: `${cursorY + 1}px`,
-              left: `${cursorX + 1}px`
-            }}
-          >
-            {draggingBlocks.map((block, index) => {
-              const { id, color, value } = block;
-              return (
-                <div
-                  id={`dragging-block${id}`}
-                  key={index}
-                  style={{
-                    display: "inline-block",
-                    backgroundColor: color,
-                    position: "relative",
-                    width: "40px",
-                    height: "60px",
-                    margin: "10px",
-                    textAlign: "center",
-                    margin: "5px",
-                    opacity: 0.7,
-                    transition: ".1s"
-                  }}
-                >
-                  {value}
-                </div>
-              );
-            })}
-          </div>
-        )}
-        {isDraggingBlock && (
-          <div
-            style={{
-              position: "absolute",
-              top: `${cursorY + 1}px`,
-              left: `${cursorX + 1}px`
-            }}
-          >
-            {draggingBlocks.map((block, index) => {
-              const { id, color, value } = block;
-              return (
-                <div
-                  id={`dragging-block${id}`}
-                  key={index}
-                  style={{
-                    display: "inline-block",
-                    backgroundColor: color,
-                    position: "relative",
-                    width: "40px",
-                    height: "60px",
-                    margin: "10px",
-                    textAlign: "center",
-                    margin: "5px",
-                    opacity: 0.4,
-                    transition: ".1s"
-                  }}
-                >
-                  {value}
-                </div>
-              );
-            })}
-          </div>
-        )}
-        <Board sets={[...boardData.sets]} updateBoard={this.updateBoard} />
+        <InfoBar
+          inRound={inRound}
+          playerName={this.state.playerData.name}
+          gameName={this.state.gameData.name}
+        />
+        {(isDraggingTemp || isDraggingBlock) && this.createDraggingBlocks()}
+        <Board
+          sets={[...boardData.sets]}
+          updateBoard={this.updateBoard}
+          addToTemp={this.addToTemp}
+          blocksColors={this.blocksColors}
+        />
         <PlayerPanel
           inRound={inRound}
           blocks={[...blocksCollection]}
@@ -409,7 +548,8 @@ class GameView extends Component {
           finishRoundHandle={this.finishRound}
           addToDraggingHandle={this.addToDragging}
           removeFromDraggingHandle={this.removeFromDragging}
-          gotBlock={gotBlock}
+          drewBlock={playerData.drewBlock}
+          isDraggingTemp={isDraggingTemp}
         />
       </div>
     );
